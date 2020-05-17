@@ -1,4 +1,5 @@
 import time
+import math
 
 import numpy
 import ray
@@ -241,14 +242,30 @@ class Trainer:
         )
 
     def update_lr(self):
-        """
-        Update learning rate
-        """
-        lr = self.config.lr_init * self.config.lr_decay_rate ** (
-            self.training_step / self.config.lr_decay_steps
-        )
-        for param_group in self.optimizer.param_groups:
-            param_group["lr"] = lr
+            """
+            Update learning rate
+            """
+            if self.config.lr_type == "periodic":
+                lr = (
+                    ( self.config.lr_max - self.config.lr_min )*abs(
+                        math.sin(
+                            ( math.pi 
+                            * ( self.training_step % self.config.lr_period ) 
+                            )
+                            / ( self.config.lr_period )
+                        )
+                    )
+                ) + self.config.lr_min
+                for param_group in self.optimizer.param_groups:
+                    param_group["lr"] = lr
+            elif self.config.lr_type == "decay":
+                lr = self.config.lr_init * self.config.lr_decay_rate ** (
+                    self.training_step / 
+                    self.config.lr_decay_steps
+                )
+                for param_group in self.optimizer.param_groups:
+                    param_group["lr"] = lr
+            # otherwise assume a constant learning rate
 
     @staticmethod
     def loss_function(
